@@ -26,4 +26,4 @@ random bytes length begin：1048576, end:5242880, test times:10000, system api c
 ```
 random bytes length begin：1, end:5242880, test times:10000, system api cost：8891, greedyMemory cost:15,totalMallocCount:9999, blockReuseCount:9983, call system malloc count:16
 ```
-如此宽范围不定长的内存分配器，此内存分配器性能提升依然到达了8891/15倍。内存重复利用率也高达：99.83%
+如此宽范围不定长的内存分配，此内存分配器性能提升依然到达了(8891/15) = 593倍。内存重复利用率也高达：99.83%
