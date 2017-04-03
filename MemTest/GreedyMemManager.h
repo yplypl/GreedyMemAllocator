@@ -38,18 +38,18 @@ struct CriticalSection
 };
 
 
-#define GREEDY_MALLOC_ALIGN 16 //ÄÚ´æ¶ÔÆë
+#define GREEDY_MALLOC_ALIGN 16 //å†…å­˜å¯¹é½
 
-const unsigned int GREEDY_MEM_MANAGE_MIN_BLOCK_SIZE = 1; //×îĞ¡»¯µÄÄÚ´æ¿é£¬Èç¹û±ÈÕâ¸öĞ¡Ôò²»»º´æ£¬Ö±½ÓÓÉ²Ù×÷ÏµÍ³ÉêÇëºÍÊÍ·Å
+const unsigned int GREEDY_MEM_MANAGE_MIN_BLOCK_SIZE = 64; //æœ€å°åŒ–çš„å†…å­˜å—ï¼Œå¦‚æœæ¯”è¿™ä¸ªå°åˆ™ä¸ç¼“å­˜ï¼Œç›´æ¥ç”±æ“ä½œç³»ç»Ÿç”³è¯·å’Œé‡Šæ”¾
 
-const unsigned int GREEDY_MEM_MANAGE_MAX_BLOCK_SIZE = 1024 * 1024 * 1024 * 1; //×î´ó»¯µÄÄÚ´æ¿é£¬Èç¹û±ÈÕâ¸ö´óÔò²»»º´æ£¬Ö±½ÓÓÉ²Ù×÷ÏµÍ³ÉêÇëºÍÊÍ·Å
+const unsigned int GREEDY_MEM_MANAGE_MAX_BLOCK_SIZE = 1024 * 1024 * 1024 * 1; //æœ€å¤§åŒ–çš„å†…å­˜å—ï¼Œå¦‚æœæ¯”è¿™ä¸ªå¤§åˆ™ä¸ç¼“å­˜ï¼Œç›´æ¥ç”±æ“ä½œç³»ç»Ÿç”³è¯·å’Œé‡Šæ”¾
 
-//ÓĞ½èÓĞ»¹£¬ÔÙ½è²»ÄÑ
-const unsigned int GREEDY_KEEP_IDLE_MEM_SECONDS = 15; //30ÃëÃ»ÓĞ±»ÖØÓÃµÄÄÚ´æ½«¹é»¹¸øÏµÍ³
+//æœ‰å€Ÿæœ‰è¿˜ï¼Œå†å€Ÿä¸éš¾
+const unsigned int GREEDY_KEEP_IDLE_MEM_SECONDS = 15; //30ç§’æ²¡æœ‰è¢«é‡ç”¨çš„å†…å­˜å°†å½’è¿˜ç»™ç³»ç»Ÿ
 
-const unsigned int GREEDY_CLEAN_IDLE_MEM_TIMER_INTERVAL = 2000;//µ¥Î»ºÁÃë,ÇåÀí¿ÕÏĞÄÚ´æ¶¨Ê±Æ÷µÄÊ±³¤
+const unsigned int GREEDY_CLEAN_IDLE_MEM_TIMER_INTERVAL = 2000;//å•ä½æ¯«ç§’,æ¸…ç†ç©ºé—²å†…å­˜å®šæ—¶å™¨çš„æ—¶é•¿
 
-#define MAX_TOTAL_REUSE_COUNT 200000//Í³¼ÆÃüÖĞÂÊµÄÊ±ºò£¬Èç¹û´ÎÊı´òµ½ÁË´ËÏŞÖÆ£¬Ôò´ÎÊı¼õ°ë¡£
+#define MAX_TOTAL_REUSE_COUNT 200000//ç»Ÿè®¡å‘½ä¸­ç‡çš„æ—¶å€™ï¼Œå¦‚æœæ¬¡æ•°æ‰“åˆ°äº†æ­¤é™åˆ¶ï¼Œåˆ™æ¬¡æ•°å‡åŠã€‚
 
 struct GreedyMemBlock;
 
@@ -92,6 +92,7 @@ typedef struct SimpleList
 		{
 			return;
 		}
+
 		
 		SimpleListNode * nodePre = node->pre;
 
@@ -135,6 +136,10 @@ typedef struct SimpleList
 
 	SimpleListNode * push_back_node(SimpleListNode * node)
 	{
+		node->pre = NULL;
+		node->next = NULL;
+
+
 		if (len == 0)
 		{
 			front = node;
@@ -158,6 +163,10 @@ typedef struct SimpleList
 
 	SimpleListNode * push_front_node(SimpleListNode * node)
 	{
+
+		node->pre = NULL;
+		node->next = NULL;
+
 		if (len == 0)
 		{
 			front = node;
@@ -199,17 +208,18 @@ typedef struct SimpleList
 		{
 			return NULL;
 		}
-
+		else if (len == 1)
+		{
+			node = end;
+			end = front = NULL;
+		}
 		else
 		{
 			node = end;			
 			end = end->pre;
-			if (node == front)
-			{
-				front = NULL;
-			}
-			len--;
+			end->next = NULL;
 		}
+		len--;
 		node->pre = NULL;
 
 		node->next = NULL;
@@ -241,20 +251,24 @@ typedef struct SimpleList
 		{
 			return NULL;
 		}
+		else if (len == 1)
+		{
+			node = front;
 
+			front = end = NULL;
+		}
 		else
 		{
 			node = front;
-			front = front->next;
-			if (node == end)
-			{
-				end = NULL;
-			}
-			len--;
-		}
-		
-		node->pre = NULL;
 
+			front = front->next;
+	
+			front->pre = NULL;
+		}
+
+		len--;
+
+		node->pre = NULL;
 		node->next = NULL;
 
 		return node;
@@ -309,13 +323,13 @@ public:
 
 	virtual void free(void * p);
 
-	void onCleanTimerFired(); //ÇåÀí¶àÓàµÄ³¤Ê±¼äÃ»ÓĞ±»ÖØÓÃµÄÄÚ´æ
+	void onCleanTimerFired(); //æ¸…ç†å¤šä½™çš„é•¿æ—¶é—´æ²¡æœ‰è¢«é‡ç”¨çš„å†…å­˜
 
 	LenAndBlocks* getLenAndBLocks(unsigned int mallocSize);
 
 	//unsigned int getManageSize(unsigned int mallocSize);
 
-	float reuseBlockHitRate();
+	double reuseBlockHitRate();
 
 	void cleanReuseBlockHitRateData();
 
